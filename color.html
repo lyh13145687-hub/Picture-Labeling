@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>取色判定</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app colorApp">
+      <header class="topbar">
+        <div class="brand brand--withBack">
+          <a class="backLink" href="./index.html" title="返回模式选择">‹</a>
+          <div class="brand__title">取色判定</div>
+        </div>
+        <div class="taxonomyStages">
+          <button class="chip chip--active" id="colorStageExtract">取色</button>
+          <button class="chip" id="colorStageReview">验收</button>
+        </div>
+        <div class="topbar__stats">
+          <span class="statPlain" id="colorStat">已取色 0/0</span>
+        </div>
+        <div class="topbar__actions">
+          <button class="btn" id="colorImport">导入对比图</button>
+          <button class="btn" id="colorImportValidation">导入验证集</button>
+          <button class="btn" id="colorApi">API</button>
+          <button class="btn btn--primary" id="colorExport">导出</button>
+        </div>
+      </header>
+
+      <main class="colorMain">
+        <section class="colorViewer card">
+          <div class="colorToolbar">
+            <input class="textInput colorSearch" id="colorSearch" placeholder="搜索文件名" />
+            <label class="colorSetting" id="colorCountSetting">取色数量
+              <input class="textInput colorCountInput" id="colorCount" type="number" min="1" max="20" value="10" />
+            </label>
+            <label class="colorSetting" id="colorSortSetting">排序权重
+              <select class="selectInput" id="colorSort">
+                <option value="area,saturation,lightness">面积 › 饱和度 › 明度</option>
+                <option value="area,lightness,saturation">面积 › 明度 › 饱和度</option>
+                <option value="saturation,area,lightness">饱和度 › 面积 › 明度</option>
+                <option value="saturation,lightness,area">饱和度 › 明度 › 面积</option>
+                <option value="lightness,area,saturation">明度 › 面积 › 饱和度</option>
+                <option value="lightness,saturation,area">明度 › 饱和度 › 面积</option>
+              </select>
+            </label>
+            <button class="btn" id="colorRecalculate">重新取色</button>
+            <div class="colorReviewSettings" id="colorReviewSettings" hidden>
+              <label class="colorSetting">筛选
+                <select class="selectInput" id="colorFilter"></select>
+              </label>
+              <label class="colorSetting">判定方式
+                <select class="selectInput" id="colorJudgeMode">
+                  <option value="verdict">合格模式</option>
+                  <option value="score">打分模式</option>
+                </select>
+              </label>
+              <label class="colorSetting">图片合格需通过
+                <input class="textInput colorCountInput" id="colorPassThreshold" type="number" min="1" max="20" value="10" />
+                色
+              </label>
+            </div>
+          </div>
+
+          <div class="colorGridWrap">
+            <div class="colorGrid" id="colorGrid"></div>
+            <div class="colorReview" id="colorReview" hidden></div>
+            <div class="taxonomyEmpty" id="colorEmpty">
+              <span>导入对比图，自动提取主色</span>
+              <button class="btn btn--primary" id="colorEmptyImport">导入对比图</button>
+            </div>
+          </div>
+
+          <div class="viewer__foot colorFoot">
+            <div class="footLeft">
+              <button class="btn" id="colorPrev">上一张</button>
+              <button class="btn" id="colorNext">下一张</button>
+            </div>
+            <div class="footCenter">
+              <span class="statPlain" id="colorPosition">第 0 / 0 张</span>
+            </div>
+            <div class="footRight">
+              <button class="btn btn--dashed" id="colorManageIssues">问题标签</button>
+              <button class="btn btn--danger" id="colorClear">清空数据</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="toastWrap" id="colorToastWrap"></section>
+        <input id="colorFolderInput" type="file" webkitdirectory multiple accept="image/*" hidden />
+        <input id="colorZipInput" type="file" accept=".zip,application/zip" hidden />
+        <input id="colorValidationFolderInput" type="file" webkitdirectory multiple accept="image/*" hidden />
+        <input id="colorValidationZipInput" type="file" accept=".zip,application/zip" hidden />
+
+        <section class="modal" id="colorImportModal" hidden>
+          <div class="modal__backdrop" data-close="1"></div>
+          <div class="modal__panel card modal__panel--small">
+            <div class="card__title" id="colorImportTitle">导入对比图</div>
+            <div class="card__body">
+              <div class="row grid2">
+                <button class="btn btn--primary" id="colorChooseFolder">选择文件夹</button>
+                <button class="btn" id="colorChooseZip">选择 ZIP</button>
+              </div>
+              <div class="row"><button class="btn" data-close-modal="colorImportModal">取消</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="modal" id="colorDetailModal" hidden>
+          <div class="modal__backdrop" data-close="1"></div>
+          <div class="modal__panel card colorDetailPanel">
+            <div class="colorDetail">
+              <div class="colorCanvasWrap" id="colorCanvasWrap">
+                <canvas id="colorCanvas"></canvas>
+                <div class="colorPickerPin" id="colorPickerPin" hidden></div>
+              </div>
+              <aside class="colorDetailSide">
+                <div class="taxonomyDetail__head">
+                  <div class="taxonomyDetail__title" id="colorDetailTitle">编辑取色</div>
+                  <button class="iconBtn" id="colorDetailClose">×</button>
+                </div>
+                <p class="colorHint">选择色块后，在原图拖动吸管；拖动色块可调整顺序。</p>
+                <div class="colorPaletteEditor" id="colorPaletteEditor"></div>
+                <button class="btn btn--dashed" id="colorAddSwatch">+添加颜色</button>
+                <textarea class="textInput taxonomyNote" id="colorReferenceNote" placeholder="对比图备注"></textarea>
+              </aside>
+            </div>
+          </div>
+        </section>
+
+        <section class="modal" id="colorMatchModal" hidden>
+          <div class="modal__backdrop" data-close="1"></div>
+          <div class="modal__panel card modal__panel--small">
+            <div class="card__title" id="colorMatchTitle">选择验证图</div>
+            <div class="card__body">
+              <div class="taxonomyMatchList" id="colorMatchList"></div>
+              <div class="row"><button class="btn" data-close-modal="colorMatchModal">取消</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="modal" id="colorIssuesModal" hidden>
+          <div class="modal__backdrop" data-close="1"></div>
+          <div class="modal__panel card modal__panel--small">
+            <div class="card__title">问题标签</div>
+            <div class="card__body">
+              <div class="colorIssueManager" id="colorIssueManager"></div>
+              <div class="taxonomyAddTagRow">
+                <input class="textInput" id="colorNewIssue" placeholder="新增问题标签" />
+                <button class="btn" id="colorAddIssue">添加</button>
+              </div>
+              <div class="row"><button class="btn" data-close-modal="colorIssuesModal">关闭</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="modal" id="colorExportModal" hidden>
+          <div class="modal__backdrop" data-close="1"></div>
+          <div class="modal__panel card taxonomyExportPanel">
+            <div class="card__title">导出取色判定</div>
+            <div class="card__body">
+              <div class="row grid2">
+                <button class="btn btn--primary" id="colorExportJson">导出 JSON</button>
+                <button class="btn" id="colorExportCsv">导出 CSV</button>
+              </div>
+              <div class="taxonomyExportDivider"></div>
+              <div id="colorAiMount"></div>
+              <div class="taxonomyExportDivider"></div>
+              <div class="row"><button class="btn" data-close-modal="colorExportModal">关闭</button></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="./jszip.min.js"></script>
+    <script src="./llm.js"></script>
+    <script src="./color.js"></script>
+  </body>
+</html>

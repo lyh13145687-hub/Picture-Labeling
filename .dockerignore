@@ -1,0 +1,6 @@
+.git
+.gitignore
+README.md
+matrix.yaml
+.dockerignore
+**/.DS_Store

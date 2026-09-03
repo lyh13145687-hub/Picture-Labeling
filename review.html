@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <title>合格判定（离线纯前端）</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand brand--withBack">
+          <a class="backLink" href="./index.html" title="返回模式选择">‹</a>
+          <div class="brand__title">序列打标</div>
+        </div>
+
+        <div class="topbar__stats" id="stats">
+          <div class="statsRow" id="statsSingle">
+            <span class="statPlain" id="statPassRate">合格率 0/0</span>
+            <span class="statPlain" id="statReviewed">已标 0/0</span>
+          </div>
+          <div class="statsRow statsRow--multi" id="statsMulti" hidden>
+            <span class="statPlain" id="statReviewedMulti">已标 0/0</span>
+          </div>
+        </div>
+
+        <div class="topbar__actions">
+          <div class="dimBar">
+            <div class="dimBar__chips" id="dimensionChips"></div>
+            <div class="dimBar__actions">
+              <button class="btn btn--dashed" id="btnDimAdd" title="新增维度">+维度</button>
+              <button class="btn" id="btnDimDelete" title="删除当前">删</button>
+            </div>
+          </div>
+          <button class="btn" id="btnImport">导入</button>
+          <button class="btn btn--primary" id="btnExport">导出</button>
+        </div>
+      </header>
+
+      <main class="main">
+        <section class="viewer card">
+          <div class="viewer__head" id="viewerHead">
+            <div class="viewer__headSingle" id="viewerHeadSingle">
+              <span class="viewer__fileName" id="currentTitle">未加载文件</span>
+              <span class="statusText" id="overallPill">pending</span>
+            </div>
+            <div class="viewer__headMulti" id="viewerHeadMulti" hidden></div>
+          </div>
+
+          <div class="viewer__body">
+            <div id="grid" class="grid"></div>
+          </div>
+
+          <div class="viewer__foot" id="viewerFoot">
+            <div class="footLeft">
+              <button class="btn" id="btnClearMark" title="清空当前列标记">清空</button>
+            </div>
+            <div class="footCenter" id="footCenter">
+              <button class="btn btn--mark btn--mark-ok" id="btnMarkApproved" title="y">合格 (y)</button>
+              <button class="btn btn--mark btn--mark-warn" id="btnMarkNeedsOpt" title="h">待优化 (h)</button>
+              <button class="btn btn--mark btn--mark-bad" id="btnMarkRejected" title="n">不合格 (n)</button>
+            </div>
+            <div class="footRight">
+              <button class="btn btn--danger" id="btnClearAll" title="清空文件+状态">清空数据</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="toastWrap" id="toastWrap"></section>
+
+        <section class="restoreBar" id="restoreBar" hidden>
+          <div class="restoreBar__text" id="restoreText">检测到上次文件，是否恢复？</div>
+          <div class="restoreBar__actions">
+            <button class="btn btn--primary" id="btnQuickLoad">恢复状态</button>
+            <button class="btn" id="btnDismissRestore">忽略</button>
+          </div>
+        </section>
+
+        <section class="modal" id="exportModal" hidden>
+          <div class="modal__backdrop" data-close="1"></div>
+          <div class="modal__panel card">
+            <div class="card__title">导出</div>
+            <div class="card__body">
+              <div class="row row--hint">导出基于“当前维度”的打标结果。</div>
+              <div class="row grid2">
+                <button class="btn" id="btnExportApproved">导出合格</button>
+                <button class="btn" id="btnExportRejected">导出不合格</button>
+              </div>
+              <div class="row">
+                <button class="btn" id="btnExportNeedsOpt">导出待优化</button>
+              </div>
+              <div class="row">
+                <button class="btn btn--primary" id="btnExportAll">导出全部（按序列/状态）</button>
+              </div>
+              <div class="row" id="exportSeqRow" hidden>
+                <div class="row row--hint">按序列导出（合格/不合格）</div>
+                <div class="row exportSeq">
+                  <select class="selectInput" id="exportSeqSelect"></select>
+                  <button class="btn" id="btnExportSeqApproved">该序列·合格</button>
+                  <button class="btn" id="btnExportSeqRejected">该序列·不合格</button>
+                </div>
+              </div>
+              <div class="row" style="margin-top:14px">
+                <div class="row row--hint">备份（不含文件）</div>
+                <div class="row grid2">
+                  <button class="btn" id="btnExportBackup">导出 JSON</button>
+                  <label class="filebtn">
+                    <input id="inputImportBackup" type="file" accept="application/json,.json" />
+                    导入 JSON
+                  </label>
+                </div>
+              </div>
+              <div class="row" style="margin-top:14px">
+                <div class="taxonomyExportDivider"></div>
+                <div id="reviewAiMount"></div>
+              </div>
+              <div class="row">
+                <button class="btn" id="btnCloseExportModal">关闭</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <input id="inputFolder" type="file" webkitdirectory multiple hidden />
+        <input id="inputZip" type="file" accept=".zip,application/zip" hidden />
+
+        <section class="modal" id="dimensionModal" hidden>
+          <div class="modal__backdrop" data-close="1"></div>
+          <div class="modal__panel card">
+            <div class="card__title">维度</div>
+            <div class="card__body">
+              <div class="row">
+                <input class="textInput" id="dimName" placeholder="维度名称（比如：A维度）" />
+              </div>
+              <div class="row">
+                <input class="textInput" id="dimDesc" placeholder="维度说明（比如：图片的色彩鲜艳程度）" />
+              </div>
+              <div class="row grid2">
+                <button class="btn btn--primary" id="btnDimSave">保存</button>
+                <button class="btn" id="btnDimCancel">取消</button>
+              </div>
+              <div class="row row--hint">提示：双击维度标签也可编辑。</div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./jszip.min.js"></script>
+    <script src="./llm.js"></script>
+    <script src="./script.js"></script>
+  </body>
+</html>

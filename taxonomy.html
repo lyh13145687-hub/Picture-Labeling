@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <title>分类打标（离线纯前端）</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app taxonomyApp">
+      <header class="topbar">
+        <div class="brand brand--withBack">
+          <a class="backLink" href="./index.html" title="返回模式选择">‹</a>
+          <div class="brand__title">分类打标</div>
+        </div>
+        <div class="taxonomyStages">
+          <button class="chip chip--active" id="taxonomyStageLabel">打标</button>
+          <button class="chip" id="taxonomyStageReview">验收</button>
+        </div>
+
+        <div class="topbar__stats">
+          <span class="statPlain" id="taxonomyStat">已分类 0/0</span>
+          <span class="statPlain" id="taxonomySelectedStat">已选 0</span>
+        </div>
+
+        <div class="topbar__actions">
+          <div class="dimBar">
+            <div class="dimBar__chips" id="taxonomyAxisChips"></div>
+            <button class="btn btn--dashed" id="taxonomyAddAxis">+分类</button>
+          </div>
+          <button class="btn" id="taxonomyImport">导入</button>
+          <button class="btn" id="taxonomyApi">API</button>
+          <button class="btn btn--primary" id="taxonomyExport">导出</button>
+        </div>
+      </header>
+
+      <main class="taxonomyMain">
+        <section class="taxonomyViewer card">
+          <div class="taxonomyToolbar" id="taxonomyToolbar">
+            <input class="textInput taxonomySearch" id="taxonomySearch" placeholder="搜索文件名" />
+            <div class="taxonomyFilter">
+              <button class="btn" id="taxonomyFilterToggle">筛选</button>
+              <div class="taxonomyFilterMenu" id="taxonomyFilterMenu" hidden></div>
+            </div>
+            <button class="btn" id="taxonomyNextIncomplete">下一张未完成</button>
+            <button class="btn" id="taxonomyNextDifference" hidden>下一处差异</button>
+          </div>
+
+          <div class="taxonomyGridWrap">
+            <div class="taxonomyGrid" id="taxonomyGrid"></div>
+            <div class="taxonomyReviewGrid" id="taxonomyReviewGrid" hidden></div>
+            <div class="taxonomyEmpty" id="taxonomyEmpty">
+              <span>导入文件夹开始分类打标</span>
+              <button class="btn btn--primary" id="taxonomyEmptyImport">导入</button>
+            </div>
+          </div>
+
+          <div class="viewer__foot taxonomyFoot">
+            <div class="footLeft">
+              <button class="btn" id="taxonomySelectAll">全选结果</button>
+              <button class="btn" id="taxonomyClearSelection">取消选择</button>
+            </div>
+            <div class="footCenter">
+              <select class="selectInput" id="taxonomyTargetTag" aria-label="当前标签"></select>
+              <button class="btn btn--primary" id="taxonomyApplyTag">加入当前标签</button>
+              <button class="btn" id="taxonomyRemoveTag">移出当前标签</button>
+              <button class="btn" id="taxonomyEditImage">数量与备注</button>
+            </div>
+            <div class="footRight">
+              <button class="btn" id="taxonomyDeleteImages">删除图片</button>
+              <button class="btn btn--danger" id="taxonomyClearAll">清空数据</button>
+            </div>
+          </div>
+
+          <div class="viewer__foot taxonomyReviewFoot" id="taxonomyReviewFoot" hidden>
+            <div class="footLeft">
+              <button class="btn" id="taxonomyReviewPrev">上一组</button>
+              <button class="btn" id="taxonomyReviewNext">下一组</button>
+            </div>
+            <div class="footCenter">
+              <span class="statPlain" id="taxonomyReviewPos">第 0 / 0 组</span>
+            </div>
+            <div class="footRight">
+              <button class="btn" id="taxonomyDeleteValidation">删除验证集</button>
+              <button class="btn btn--dashed" id="taxonomyAddIssueTag">+问题标签</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="toastWrap" id="taxonomyToastWrap"></section>
+
+        <section class="restoreBar" id="taxonomyRestoreBar" hidden>
+          <div class="restoreBar__text">检测到上次分类打标项目，是否恢复？</div>
+          <div class="restoreBar__actions">
+            <button class="btn btn--primary" id="taxonomyRestore">恢复</button>
+            <button class="btn" id="taxonomyDismissRestore">忽略</button>
+          </div>
+        </section>
+
+        <input id="taxonomyFolderInput" type="file" webkitdirectory multiple hidden />
+        <input id="taxonomyZipInput" type="file" accept=".zip,application/zip" hidden />
+        <input id="taxonomyJsonInput" type="file" accept="application/json,.json" hidden />
+        <input id="taxonomyValidationFolderInput" type="file" webkitdirectory multiple hidden />
+        <input id="taxonomyValidationZipInput" type="file" accept=".zip,application/zip" hidden />
+        <input id="taxonomyValidationJsonInput" type="file" accept="application/json,.json" hidden />
+
+        <section class="modal" id="taxonomyImportModal" hidden>
+          <div class="modal__backdrop" data-close="1"></div>
+          <div class="modal__panel card modal__panel--small">
+            <div class="card__title">导入</div>
+            <div class="card__body">
+              <div class="row grid2">
+                <button class="btn btn--primary" id="taxonomyChooseFolder">选择文件夹</button>
+                <button class="btn" id="taxonomyChooseZip">选择 ZIP</button>
+              </div>
+              <div class="row">
+                <button class="btn" data-close-modal="taxonomyImportModal">取消</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="modal" id="taxonomyTagsModal" hidden>
+          <div class="modal__backdrop" data-close="1"></div>
+          <div class="modal__panel card taxonomyCategoriesPanel">
+            <div class="card__title">标签层级</div>
+            <div class="card__body">
+              <div class="taxonomyCategoryGuide">每行是一个层级，每个目标需在每行选择一个标签。拖动标签可调整所属层级。</div>
+              <div class="taxonomyCategoryList" id="taxonomyCategoryList"></div>
+              <div class="row">
+                <button class="btn btn--dashed" id="taxonomyAddCategoryFromList">+新增层级</button>
+              </div>
+              <div class="row">
+                <button class="btn" data-close-modal="taxonomyTagsModal">关闭</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="modal" id="taxonomyEditModal" hidden>
+          <div class="modal__backdrop" data-close="1"></div>
+          <div class="modal__panel card taxonomyDetailPanel">
+            <div class="taxonomyDetail">
+              <div class="taxonomyDetail__media" id="taxonomyDetailMedia"></div>
+              <aside class="taxonomyDetail__side">
+                <div class="taxonomyDetail__head">
+                  <div class="taxonomyDetail__title" id="taxonomyEditTitle">图片详情</div>
+                  <button class="iconBtn taxonomyDetail__close" id="taxonomyCloseDetail" title="关闭">×</button>
+                </div>
+                <div class="taxonomyDetail__targets" id="taxonomyTargets"></div>
+                <button class="btn btn--dashed taxonomyDetail__add" id="taxonomyAddTarget">+添加标签</button>
+                <textarea class="textInput taxonomyNote" id="taxonomyNote" placeholder="图片备注"></textarea>
+                <div class="taxonomyDetail__nav">
+                  <button class="btn" id="taxonomyPrevImage">上一张</button>
+                  <button class="btn" id="taxonomyNextImage">下一张</button>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </section>
+
+        <section class="modal" id="taxonomyLabelPickerModal" hidden>
+          <div class="modal__backdrop" data-close="1"></div>
+          <div class="modal__panel card modal__panel--small">
+            <div class="card__title" id="taxonomyLabelPickerTitle">选择标签</div>
+            <div class="card__body">
+              <div class="taxonomyLabelPicker" id="taxonomyLabelPicker"></div>
+              <div class="row">
+                <button class="btn" data-close-modal="taxonomyLabelPickerModal">取消</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="modal" id="taxonomyExportModal" hidden>
+          <div class="modal__backdrop" data-close="1"></div>
+          <div class="modal__panel card taxonomyExportPanel">
+            <div class="card__title">导出</div>
+            <div class="card__body">
+              <div class="row taxonomyExportActions">
+                <button class="btn" id="taxonomyExportJson">json</button>
+                <button class="btn" id="taxonomyExportCsv">csv</button>
+                <button class="btn" id="taxonomyExportReviewSummary">验收摘要</button>
+              </div>
+              <div class="taxonomyExportDivider"></div>
+              <div class="taxonomyAiExport">
+                <div class="taxonomyAiExport__head">
+                  <span>AI 结论</span>
+                  <select class="selectInput" id="taxonomyAiContext" aria-label="发送给 AI 的数据范围">
+                    <option value="summary">统计摘要</option>
+                    <option value="full">完整明细</option>
+                  </select>
+                </div>
+                <textarea
+                  class="textInput taxonomyAiPrompt"
+                  id="taxonomyAiPrompt"
+                  placeholder="例如：请总结主要问题、风险和优化优先级，并给出可直接汇报的结论"
+                ></textarea>
+                <div class="taxonomyAiExport__actions">
+                  <span class="taxonomyAiStatus" id="taxonomyAiStatus"></span>
+                  <button class="btn" id="taxonomyAiSend">发送</button>
+                </div>
+                <textarea
+                  class="textInput taxonomyAiResult"
+                  id="taxonomyAiResult"
+                  placeholder="LLM 返回内容"
+                  readonly
+                  hidden
+                ></textarea>
+                <button class="btn taxonomyAiDownload" id="taxonomyAiDownload" disabled hidden>
+                  导出 AI 结论 TXT
+                </button>
+              </div>
+              <div class="taxonomyExportDivider"></div>
+              <div class="row taxonomyExportFooter">
+                <button class="btn" id="taxonomyImportJson">导入json</button>
+                <button class="btn" data-close-modal="taxonomyExportModal">关闭</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="modal" id="taxonomyApiModal" hidden>
+          <div class="modal__backdrop" data-close="1"></div>
+          <div class="modal__panel card modal__panel--small">
+            <div class="card__title">API</div>
+            <div class="card__body taxonomyApiForm">
+              <p class="taxonomyApiIntro" id="taxonomyApiIntro">
+                只需填三项：API Key、请求地址、模型名称。任意 OpenAI 兼容服务（OpenAI、DeepSeek、火山方舟、Kimi、通义等）均可调用。
+              </p>
+              <div class="taxonomyApiQuick" id="taxonomyApiQuick">
+                <span class="taxonomyApiQuick__label">常用服务（点击自动填充地址和模型）：</span>
+              </div>
+              <label class="taxonomyApiField">
+                <span>API Key</span>
+                <input
+                  class="textInput"
+                  id="taxonomyApiKey"
+                  type="password"
+                  autocomplete="off"
+                  placeholder="服务商控制台申请的 Key"
+                />
+                <span class="taxonomyApiHint" id="taxonomyApiKeyHint">
+                  以 <code>Authorization: Bearer Key</code> 方式鉴权，兼容绝大多数服务；本机模型（如 Ollama）可留空。
+                </span>
+              </label>
+              <label class="taxonomyApiField">
+                <span>请求地址（Base URL）</span>
+                <input class="textInput" id="taxonomyApiEndpoint" />
+                <span class="taxonomyApiHint">
+                  填到 <code>https://域名/v1</code> 即可，会自动补全为 <code>/chat/completions</code> 接口。
+                </span>
+              </label>
+              <label class="taxonomyApiField">
+                <span>模型名称</span>
+                <input class="textInput" id="taxonomyApiModel" />
+                <span class="taxonomyApiHint" id="taxonomyApiModelHint">
+                  例如 <code>gpt-4o-mini</code>、<code>deepseek-chat</code>，按服务商模型列表填写。
+                </span>
+              </label>
+              <p class="taxonomyApiWarning">
+                配置仅保存在本机浏览器。纯前端无法隐藏 API Key，请勿在公共设备保存。
+              </p>
+              <div class="taxonomyApiTest">
+                <button class="btn" id="taxonomyApiTest">测试连接</button>
+                <span class="taxonomyApiStatus" id="taxonomyApiStatus"></span>
+              </div>
+              <div class="row taxonomyApiActions">
+                <button class="btn btn--primary" id="taxonomyApiSave">保存</button>
+                <button class="btn" id="taxonomyApiClear">清除配置</button>
+                <button class="btn" data-close-modal="taxonomyApiModal">关闭</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="modal" id="taxonomyValidationImportModal" hidden>
+          <div class="modal__backdrop" data-close="1"></div>
+          <div class="modal__panel card modal__panel--small">
+            <div class="card__title">导入验证集</div>
+            <div class="card__body">
+              <div class="row taxonomyImportMode">
+                <label class="taxonomyRadio">
+                  <input type="radio" name="taxonomyValidationMode" value="merge" checked />
+                  <span>上传到同列</span>
+                </label>
+                <label class="taxonomyRadio">
+                  <input type="radio" name="taxonomyValidationMode" value="split" />
+                  <span>分列上传</span>
+                </label>
+              </div>
+              <div class="row grid2">
+                <button class="btn btn--primary" id="taxonomyChooseValidationFolder">选择文件夹</button>
+                <button class="btn" id="taxonomyChooseValidationZip">选择 ZIP</button>
+              </div>
+              <div class="row">
+                <button class="btn" id="taxonomyChooseValidationJson">导入检测 JSON</button>
+              </div>
+              <div class="row">
+                <button class="btn" data-close-modal="taxonomyValidationImportModal">关闭</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="modal" id="taxonomyMatchModal" hidden>
+          <div class="modal__backdrop" data-close="1"></div>
+          <div class="modal__panel card modal__panel--small">
+            <div class="card__title" id="taxonomyMatchTitle">选择匹配对象</div>
+            <div class="card__body">
+              <div class="taxonomyMatchList" id="taxonomyMatchList"></div>
+              <div class="row">
+                <button class="btn" data-close-modal="taxonomyMatchModal">取消</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="modal" id="taxonomyDeleteValidationModal" hidden>
+          <div class="modal__backdrop" data-close="1"></div>
+          <div class="modal__panel card modal__panel--small">
+            <div class="card__title">删除验证集</div>
+            <div class="card__body">
+              <div class="taxonomyDeleteValidationList" id="taxonomyDeleteValidationList"></div>
+              <div class="row">
+                <button class="btn" id="taxonomyDeleteValidationConflicts">删除全部冲突文件名</button>
+              </div>
+              <div class="row">
+                <button class="btn" id="taxonomyDeleteValidationExtras">删除全部多出</button>
+              </div>
+              <div class="row">
+                <button class="btn btn--danger" id="taxonomyDeleteValidationAll">删除全部验证集</button>
+              </div>
+              <div class="row">
+                <button class="btn" data-close-modal="taxonomyDeleteValidationModal">取消</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./jszip.min.js"></script>
+    <script src="./llm.js"></script>
+    <script src="./taxonomy.js"></script>
+  </body>
+</html>
